@@ -1,28 +1,29 @@
 use rayon::prelude::*;
 use std::{borrow::Cow, str::FromStr, time::Instant};
 use wgpu::util::DeviceExt;
+use plonky2_field::goldilocks_field::GoldilocksField;
 
-fn iterations(n_base: u32) -> u32 {
-    let mut n: u32 = n_base;
-    let mut a: u32 = 0;
-    let mut b: u32 = 1;
+fn iterations(n_base: u64) -> u64 {
+    let mut n = n_base;
+    let mut a = GoldilocksField(0);
+    let mut b = GoldilocksField(1);
     loop {
         if n <= 1 {
             break;
         }
-        let t = (a + b) % 65521;
+        let t = a + b;
         a = b;
         b = t;
         n -= 1;
     }
-    return b;
+    return b.0;
 }
 
-async fn run_cpu(numbers: &[u32]) -> Vec<u32> {
+async fn run_cpu(numbers: &[u64]) -> Vec<u64> {
     numbers.iter().copied().map(iterations).collect()
 }
 
-async fn run_cpu_par(numbers: &[u32]) -> Vec<u32> {
+async fn run_cpu_par(numbers: &[u64]) -> Vec<u64> {
     numbers.par_iter().copied().map(iterations).collect()
 }
 
@@ -139,9 +140,9 @@ impl Gpu {
         }
     }
 
-    async fn run(&mut self, numbers: &[u32]) -> Vec<u32> {
+    async fn run(&mut self, numbers: &[u64]) -> Vec<u64> {
         // Gets the size in bytes of the buffer.
-        let slice_size = numbers.len() * std::mem::size_of::<u32>();
+        let slice_size = numbers.len() * std::mem::size_of::<u64>();
         let size = slice_size as wgpu::BufferAddress;
 
         self.queue
@@ -161,7 +162,7 @@ impl Gpu {
         cpass.set_pipeline(&self.compute_pipeline);
         cpass.set_bind_group(0, &self.bind_group, &[]);
         cpass.insert_debug_marker("compute collatz iterations");
-        cpass.dispatch((size / 4) as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.dispatch(numbers.len() as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
         drop(cpass);
 
         // Sets adds copy operation to command encoder.
@@ -210,33 +211,11 @@ impl Gpu {
 async fn run() {
     let input = (10000..50000).collect::<Vec<_>>();
 
-    let mut gpu = Gpu::new(input.len() * 4).await;
-
-    println!("Compute using CPU (single)");
-    let now = Instant::now();
-    let steps = run_cpu(&input).await;
-    let elapsed = now.elapsed();
-    println!("Done in {:.2?}", elapsed);
+    let mut gpu = Gpu::new(input.len() * 8).await;
 
     println!("Compute using CPU (parallel)");
     let now = Instant::now();
-    let steps3 = run_cpu_par(&input).await;
-    let elapsed = now.elapsed();
-    println!("Done in {:.2?}", elapsed);
-
-    println!("Compute using GPU");
-    let now = Instant::now();
-    let steps2 = gpu.run(&input).await;
-    let elapsed = now.elapsed();
-    println!("Done in {:.2?}", elapsed);
-
-    assert_eq!(steps, steps2);
-
-    let input = (20000..60000).collect::<Vec<_>>();
-
-    println!("Compute using CPU");
-    let now = Instant::now();
-    let steps = run_cpu(&input).await;
+    let steps = run_cpu_par(&input).await;
     let elapsed = now.elapsed();
     println!("Done in {:.2?}", elapsed);
 
