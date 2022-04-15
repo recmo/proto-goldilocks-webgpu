@@ -16,18 +16,15 @@ fn fib(n_base: u64) -> u64 {
         b = t;
         n -= 1;
     }
-    return b.0;
+    b.0
 }
 
 fn fac(n: u64) -> u64 {
-    let mut r = 1;
+    let mut r = GoldilocksField(1);
     for i in 2..=n {
-        let p = (r as u128) * (i as u128);
-        let lo = p as u64;
-        let hi = (p >> 64) as u64;
-        r = lo ^ hi;
+        r *= GoldilocksField(i);
     }
-    r
+    r.0
 }
 
 async fn run_cpu(numbers: &[u64]) -> Vec<u64> {

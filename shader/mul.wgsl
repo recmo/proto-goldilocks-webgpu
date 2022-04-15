@@ -84,16 +84,21 @@ fn mul128(a: vec2<u32>, b: vec2<u32>) -> vec4<u32> {
 /// See <https://github.com/mir-protocol/plonky2/blob/main/field/src/goldilocks_field.rs#L327>
 fn reduce(n: vec4<u32>) -> vec2<u32> {
     // Compute 
-    // n.x + n.y * 2^32 + n.z * 2^64 + n.w * 2^96 mod 2^64 - 2^32 + 1
+    // n.x + n.y * 2^32 + n.z * 2^64 + n.w * 2^96 mod p
     // which equals
-    // n.x - n.z - n.w + (n.y + n.z) * 2^32 mod 2^64 - 2^32 + 1
+    // n.x - n.z - n.w + (n.y + n.z) * 2^32 mod p
 
     var r = n.xy;
     r.x -= n.z;
     r.x -= n.w;
     r.y += n.z;
+    // TODO: Carries
 
-    return vec2<u32>(0u, 0u);
+    return r;
+}
+
+fn mul(a: vec2<u32>, b: vec2<u32>) -> vec2<u32> {
+    return reduce(mul128(a, b));
 }
 
 fn factorial(n: vec2<u32>) -> vec2<u32> {
@@ -103,8 +108,7 @@ fn factorial(n: vec2<u32>) -> vec2<u32> {
         if (i.x > n.x) {
             break;
         }
-        var p = mul128(r, i);
-        r = p.xy ^ p.zw;
+        r = mul(r, i);
         i.x += 1u;
     }
     return r;
