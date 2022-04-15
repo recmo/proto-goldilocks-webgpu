@@ -76,9 +76,12 @@ impl Gpu {
         
 
         // Loads the shader from WGSL
+        let mut source = include_str!("../shader/goldilocks.wgsl").to_string();
+        source.push_str(include_str!("../shader/mul.wgsl"));
+        
         let cs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label:  None,
-            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shader/mul.wgsl"))),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
         });
 
         // Instantiates buffer without data.
