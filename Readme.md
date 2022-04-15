@@ -1,8 +1,12 @@
-# Prototype WebGPU compute implementation of Goldilocks
+# Prototype Goldilocks WebGPU
+
+Computing factorials `0..50000` on M1 Max:
 
 ```
-$ cargo run --release
+cargo run --release
+```
 
+```
 Compute using CPU (parallel)
 Done in 464.51ms
 Compute using GPU
