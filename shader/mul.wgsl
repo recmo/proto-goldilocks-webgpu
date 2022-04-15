@@ -89,10 +89,44 @@ fn reduce(n: vec4<u32>) -> vec2<u32> {
     // n.x - n.z - n.w + (n.y + n.z) * 2^32 mod p
 
     var r = n.xy;
+
+    // Substract n.z
+    if (r.x < n.z) {
+        if (r.y == 0u) {
+            // Add p
+            r.x += 1u; // Can not overflow
+            r.y = 0xffffffffu;
+        }
+        r.y -= 1u;
+    }
     r.x -= n.z;
+
+    // Substract n.w
+    if (r.x < n.w) {
+        if (r.y == 0u) {
+            // Add p
+            r.x += 1u; // Can not overflow
+            r.y = 0xffffffffu;
+        }
+        r.y -= 1u;
+    }
     r.x -= n.w;
+
+    // Add n.z * 2^32
     r.y += n.z;
-    // TODO: Carries
+    if (r.y < n.z) {
+        // Add 2**64 mod p = 0xffffffff
+        r.x += 0xffffffffu;
+        if (r.x < 0xffffffffu) {
+            r.y += 1u; // Can not overflow
+        }
+    }
+
+    // Reduce mod p
+    if (r.y == 0xffffffffu && r.x != 0u) {
+        r.y = 0u;
+        r.x -= 1u; // Can not underflow
+    }
 
     return r;
 }
