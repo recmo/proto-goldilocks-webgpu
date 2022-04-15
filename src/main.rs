@@ -3,7 +3,7 @@ use std::{borrow::Cow, str::FromStr, time::Instant};
 use wgpu::util::DeviceExt;
 use plonky2_field::goldilocks_field::GoldilocksField;
 
-fn iterations(n_base: u64) -> u64 {
+fn fib(n_base: u64) -> u64 {
     let mut n = n_base;
     let mut a = GoldilocksField(0);
     let mut b = GoldilocksField(1);
@@ -19,12 +19,23 @@ fn iterations(n_base: u64) -> u64 {
     return b.0;
 }
 
+fn fac(n: u64) -> u64 {
+    let mut r = 1;
+    for i in 2..=n {
+        let p = (r as u128) * (i as u128);
+        let lo = p as u64;
+        let hi = (p >> 64) as u64;
+        r = lo ^ hi;
+    }
+    r
+}
+
 async fn run_cpu(numbers: &[u64]) -> Vec<u64> {
-    numbers.iter().copied().map(iterations).collect()
+    numbers.iter().copied().map(fac).collect()
 }
 
 async fn run_cpu_par(numbers: &[u64]) -> Vec<u64> {
-    numbers.par_iter().copied().map(iterations).collect()
+    numbers.par_iter().copied().map(fac).collect()
 }
 
 struct Gpu {
@@ -65,10 +76,12 @@ impl Gpu {
             .await
             .unwrap();
 
+        
+
         // Loads the shader from WGSL
         let cs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label:  None,
-            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shader/add.wgsl"))),
+            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shader/mul.wgsl"))),
         });
 
         // Instantiates buffer without data.
@@ -161,7 +174,6 @@ impl Gpu {
         let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
         cpass.set_pipeline(&self.compute_pipeline);
         cpass.set_bind_group(0, &self.bind_group, &[]);
-        cpass.insert_debug_marker("compute collatz iterations");
         cpass.dispatch(numbers.len() as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
         drop(cpass);
 
@@ -209,7 +221,8 @@ impl Gpu {
 }
 
 async fn run() {
-    let input = (10000..50000).collect::<Vec<_>>();
+    let size = 50000;
+    let input = (0 .. size).collect::<Vec<_>>();
 
     let mut gpu = Gpu::new(input.len() * 8).await;
 
