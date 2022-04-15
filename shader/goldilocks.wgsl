@@ -1,3 +1,4 @@
+// TODO: Rewrite when <https://github.com/gpuweb/gpuweb/issues/1565> resolves.
 
 // Goldilocks field elements are represented as a pair of u32s in little-endian order.
 type Gold = vec2<u32>;
@@ -18,8 +19,10 @@ let ONE = Gold(1u,0u);
 // U T I L I T I E S              //
 ////////////////////////////////////
 
+// See <https://github.com/google/angle/blob/main/src/compiler/translator/BuiltInFunctionEmulatorHLSL.cpp#L69>
+
 // Compute the top 32 bit of the addition
-fn addh(a: u32, b: u32) -> u32 {
+fn hadd(a: u32, b: u32) -> u32 {
     return (a >> 1u) + (b >> 1u) + ((a & b) & 1u);
 }
 
@@ -40,7 +43,7 @@ fn mul64(a: u32, b: u32) -> vec2<u32> {
     // Sum the half products
     var r: vec2<u32>;
     r.x = a0b0 + (a1b0 << 16u) + (a0b1 << 16u);
-    r.y = a1b1 + (addh((a0b0 >> 16u) + a0b1, a1b0) >> 15u);
+    r.y = a1b1 + (hadd((a0b0 >> 16u) + a0b1, a1b0) >> 15u);
     return r;
 }
 

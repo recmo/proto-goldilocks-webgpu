@@ -1,3 +1,10 @@
+# Prototype WebGPU compute implementation of Goldilocks
 
+```
+$ cargo run --release
 
-* See <https://github.com/itzmeanjan/ff-gpu>
+Compute using CPU (parallel)
+Done in 464.51ms
+Compute using GPU
+Done in 40.40ms
+```
